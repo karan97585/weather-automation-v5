@@ -1,32 +1,30 @@
-# alerting.py ✅ Advanced version
+# main.py ✅ Scheduler Runner
 
+import schedule
+import time
+from weather_fetcher import fetch_and_store_weather
+from export_csv import export_old_data_to_csv
+from db_utils import delete_old_data
 import logging
-import smtplib
-from email.message import EmailMessage
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# ✅ Logging setup
+logging.basicConfig(
+    filename='weather_log.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    encoding='utf-8'
+)
 
-EMAIL_SENDER = os.getenv("EMAIL_SENDER")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
+# ✅ First run immediately
+fetch_and_store_weather()
+delete_old_data(days=30)
+export_old_data_to_csv(days=30)
 
-def log_error(message):
-    logging.error(f"❌ {message}")
-    send_email_alert(message)
+# ✅ Schedule jobs
+schedule.every(30).minutes.do(fetch_and_store_weather)
+schedule.every().day.at("01:00").do(delete_old_data, days=30)
+schedule.every().day.at("01:10").do(export_old_data_to_csv, days=30)
 
-def send_email_alert(message):
-    try:
-        msg = EmailMessage()
-        msg.set_content(f"🚨 Weather Script Error:\n\n{message}")
-        msg["Subject"] = "Weather Automation Alert"
-        msg["From"] = EMAIL_SENDER
-        msg["To"] = EMAIL_RECEIVER
-
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-            smtp.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            smtp.send_message(msg)
-    except Exception as e:
-        logging.error(f"❌ Failed to send alert email: {e}")
-
+while True:
+    schedule.run_pending()
+    time.sleep(10)

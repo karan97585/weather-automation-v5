@@ -1,43 +1,31 @@
-# alerting.py
+# alerting.py ✅ Error Logging + Email Alert
 
 import logging
-import requests
-# from smtplib import SMTP  # (Optional: for email alerts)
+import smtplib
+from email.message import EmailMessage
+import os
+from dotenv import load_dotenv
 
-# Setup logging
-logging.basicConfig(
-    filename='weather_log.log',
-    level=logging.ERROR,
-    format='%(asctime)s - ERROR - %(message)s'
-)
+load_dotenv()
+
+EMAIL_SENDER = os.getenv("EMAIL_SENDER")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
 
 def log_error(message):
-    """
-    Logs the error to a file and prints it to console.
-    """
     logging.error(f"❌ {message}")
-    print(f"[❌ ERROR] {message}")
+    send_email_alert(message)
 
-    # Optional future alerts (currently disabled)
-    # send_webhook_alert(message)
-    # send_email_alert(message)
-
-# -------------------------------
-# ✅ Optional Webhook Alert Setup
-# -------------------------------
-def send_webhook_alert(message):
-    webhook_url = "https://your-webhook-url.com"  # replace if needed
-    payload = {"text": f"⚠️ Weather Alert: {message}"}
+def send_email_alert(message):
     try:
-        response = requests.post(webhook_url, json=payload)
-        if response.status_code != 200:
-            logging.error(f"Webhook failed: {response.status_code}")
-    except Exception as e:
-        logging.error(f"Webhook exception: {e}")
+        msg = EmailMessage()
+        msg.set_content(f"🚨 Weather Script Error:\n\n{message}")
+        msg["Subject"] = "Weather Automation Alert"
+        msg["From"] = EMAIL_SENDER
+        msg["To"] = EMAIL_RECEIVER
 
-# -------------------------------
-# ✅ Optional Email Alert Setup
-# -------------------------------
-# def send_email_alert(message):
-#     # Future implementation if needed
-#     pass
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            smtp.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            smtp.send_message(msg)
+    except Exception as e:
+        logging.error(f"❌ Failed to send alert email: {e}")

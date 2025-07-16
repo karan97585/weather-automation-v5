@@ -7,6 +7,7 @@ from alerting import log_error
 from dotenv import load_dotenv
 import os
 import time
+import logging
 
 # ✅ Load env variables
 load_dotenv()
@@ -14,7 +15,7 @@ API_KEY = os.getenv("API_KEY")
 
 # ✅ Cities grouped by state
 cities = {
-    "Uttarakhand": ["Dehradun", "Haridwar", "Rishikesh", "Roorkee", "Haldwani", "Nainital", "Kashipur", "Rudrapur", "Almora", "Pithoragarh", "Bageshwar", "Chamoli", "Tehri", "Pauri", "Mussoorie", "Khatima", "Sitarganj", "Tanakpur", "Lohaghat", "Champawat", "Doiwala", "Kotdwar", "Bhimtal"],
+    "Uttarakhand": ["Dehradun", "Haridwar", "Rishikesh", "Roorkee", "Haldwani", "Nainital", "Kashipur", "Rudrapur", "Almora", "Pithoragarh", "Bageshwar", "Tehri", "Pauri", "Mussoorie", "Khatima", "Sitarganj", "Tanakpur", "Lohaghat", "Champawat", "Doiwala", "Kotdwar", "Bhimtal"],
     "Delhi": ["Delhi"],
     "Maharashtra": ["Mumbai", "Pune"],
     "Karnataka": ["Bengaluru", "Mysuru"],
@@ -54,7 +55,12 @@ def fetch_and_store_weather():
                 desc = data["weather"][0]["description"]
                 icon = data["weather"][0]["icon"]
                 timestamp = datetime.now()
+
                 insert_weather(cursor, city, state, temp, humidity, desc, icon, timestamp)
+
+                # ✅ Insert ke baad yeh line
+                logging.info(f"✅ Inserted: {city} | Temp: {temp}°C | Humidity: {humidity}%")
+
             else:
                 log_error(f"⚠️ No data for {city}")
 
