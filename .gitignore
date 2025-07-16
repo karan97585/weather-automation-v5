@@ -1,23 +1,27 @@
-# Ignore Python cache and compiled files
-__pycache__/
-*.pyc
-
-# Ignore virtual environments
-venv/
-env/
-
-# Ignore environment config files
+# Ignore environment variable file
 .env
 
 # Ignore log files
 *.log
 
-# Ignore Jupyter notebooks output checkpoints (if any)
-.ipynb_checkpoints/
+# Ignore Python cache
+__pycache__/
+*.py[cod]
 
-# Ignore OS files
-.DS_Store
+# Ignore backup and CSV exports
+*.csv
+*.bak
 
-# Ignore idea/editor settings
+# Ignore Jupyter/IPython notebooks (if any)
+*.ipynb
+
+# Ignore VS Code settings folder
 .vscode/
-.idea/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore virtual environment folders (optional)
+venv/
+env/
