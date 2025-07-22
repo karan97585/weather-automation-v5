@@ -28,3 +28,4 @@ schedule.every().day.at("01:10").do(export_old_data_to_csv, days=30)
 while True:
     schedule.run_pending()
     time.sleep(10)
+

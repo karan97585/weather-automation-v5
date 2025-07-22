@@ -1,5 +1,3 @@
-# weather_fetcher.py 🌦️ API Fetch + Retry + Insert
-
 import requests
 from datetime import datetime
 from db_utils import create_connection, create_table, insert_weather
@@ -8,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import time
 import logging
+import calendar
 
 # ✅ Load env variables
 load_dotenv()
@@ -15,7 +14,11 @@ API_KEY = os.getenv("API_KEY")
 
 # ✅ Cities grouped by state
 cities = {
-    "Uttarakhand": ["Dehradun", "Haridwar", "Rishikesh", "Roorkee", "Haldwani", "Nainital", "Kashipur", "Rudrapur", "Almora", "Pithoragarh", "Bageshwar", "Tehri", "Pauri", "Mussoorie", "Khatima", "Sitarganj", "Tanakpur", "Lohaghat", "Champawat", "Doiwala", "Kotdwar", "Bhimtal"],
+    "Uttarakhand": [
+        "Dehradun", "Haridwar", "Rishikesh", "Roorkee", "Haldwani", "Nainital", "Kashipur", "Rudrapur",
+        "Almora", "Pithoragarh", "Bageshwar", "Tehri", "Pauri", "Mussoorie", "Khatima", "Sitarganj",
+        "Tanakpur", "Lohaghat", "Champawat", "Doiwala", "Kotdwar", "Bhimtal"
+    ],
     "Delhi": ["Delhi"],
     "Maharashtra": ["Mumbai", "Pune"],
     "Karnataka": ["Bengaluru", "Mysuru"],
@@ -38,6 +41,23 @@ def fetch_weather(city, retries=3, delay=2):
         time.sleep(delay)
     return None
 
+# ✅ Categorization logic
+def categorize_temp(temp):
+    if temp < 10: return "Cold"
+    elif temp < 25: return "Moderate"
+    else: return "Hot"
+
+def is_rain(description):
+    return "Yes" if "rain" in description.lower() else "No"
+
+def alert_level(temp, humidity):
+    if temp > 40 or humidity > 90:
+        return "High"
+    elif temp > 30:
+        return "Medium"
+    else:
+        return "Low"
+
 # ✅ Fetch & insert data into DB
 def fetch_and_store_weather():
     conn = create_connection()
@@ -50,21 +70,40 @@ def fetch_and_store_weather():
         for city in city_list:
             data = fetch_weather(city)
             if data and data.get("main"):
-                temp = data["main"]["temp"]
-                humidity = data["main"]["humidity"]
-                desc = data["weather"][0]["description"]
-                icon = data["weather"][0]["icon"]
-                timestamp = datetime.now()
+                try:
+                    temp = data["main"]["temp"]
+                    temp_f = (temp * 9/5) + 32
+                    feels_like = data["main"]["feels_like"]
+                    humidity = data["main"]["humidity"]
+                    desc = data["weather"][0]["description"]
+                    icon = data["weather"][0]["icon"]
+                    wind_speed = data["wind"]["speed"]
+                    cloudiness = data["clouds"]["all"]
+                    timestamp = datetime.now()
+                    day_of_week = calendar.day_name[timestamp.weekday()]
+                    hour = timestamp.hour
+                    temp_cat = categorize_temp(temp)
+                    rain = is_rain(desc)
+                    alert = alert_level(temp, humidity)
 
-                insert_weather(cursor, city, state, temp, humidity, desc, icon, timestamp)
+                    # ✅ Insert to DB
+                    insert_weather(
+                        cursor, city, state, temp, temp_f, feels_like, humidity, desc, icon,
+                        wind_speed, cloudiness, timestamp,
+                        day_of_week, hour, temp_cat, rain, alert
+                    )
 
-                # ✅ Insert ke baad yeh line
-                logging.info(f"✅ Inserted: {city} | Temp: {temp}°C | Humidity: {humidity}%")
+                    # ✅ Detailed Logging
+                    logging.info(
+                        f"✅ {city}, {state} | {temp:.2f}°C / {temp_f:.2f}°F | Feels Like: {feels_like:.2f}°C | "
+                        f"{humidity}% Humidity | Wind: {wind_speed:.1f} m/s | Clouds: {cloudiness}% | "
+                        f"Desc: {desc} | Day: {day_of_week} | Hour: {hour} | "
+                        f"Category: {temp_cat} | Rain: {rain} | Alert: {alert}"
+                    )
 
-            else:
-                log_error(f"⚠️ No data for {city}")
+                except Exception as e:
+                    log_error(f"Insert error {city}: {e}")
 
     conn.commit()
     cursor.close()
     conn.close()
-
